@@ -32,10 +32,10 @@ func (c *StructConverter) GetFrameworkType(converters *Converter, typ reflect.Ty
 }
 
 func (c *StructConverter) Decode(converters *Converter, path, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
-	ref := jen.Id("item")
+	ref := jen.Op("*").Id("item")
 	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
-		ref = jen.Op("&").Add(ref)
+		ref = jen.Id("item")
 	}
 
 	_, _, decodeFunctionName, _, err := converters.GetNamesForType(typ)
@@ -44,8 +44,8 @@ func (c *StructConverter) Decode(converters *Converter, path, src, target *jen.S
 	}
 
 	return jen.If(src.Clone().Op("!=").Nil()).Block(
-		jen.Var().Id("item").Qual(typ.PkgPath(), typ.Name()),
-		jen.Id("diags").Dot("Append").Call(jen.Id(decodeFunctionName).Call(path, jen.Op("*").Add(src), jen.Op("&").Id("item")).Op("...")),
+		jen.Var().Id("item").Op("*").Qual(typ.PkgPath(), typ.Name()),
+		jen.Id("diags").Dot("Append").Call(jen.Id(decodeFunctionName).Call(path, jen.Add(src), jen.Op("&").Id("item")).Op("...")),
 		jen.Line(),
 		jen.If(jen.Id("diags").Dot("HasError").Call()).Block(
 			jen.Return(jen.Id("diags")),

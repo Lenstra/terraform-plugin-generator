@@ -18,9 +18,10 @@ type Coffee struct {
 }
 
 type Config struct {
-	Host     types.String `tfsdk:"host"`
-	Username types.String `tfsdk:"username"`
-	Password types.String `tfsdk:"password"`
+	Host   types.String `tfsdk:"host"`
+	Bool   types.Bool   `tfsdk:"bool"`
+	Int    types.Int64  `tfsdk:"int"`
+	String types.String `tfsdk:"string"`
 }
 
 type Ingredient struct {

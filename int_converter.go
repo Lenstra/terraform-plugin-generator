@@ -1,10 +1,9 @@
-package converters
+package generator
 
 import (
 	"fmt"
 	"reflect"
 
-	"github.com/Lenstra/terraform-plugin-generator/tags"
 	"github.com/dave/jennifer/jen"
 )
 
@@ -33,7 +32,7 @@ func (c *IntConverter) GetFrameworkType(_ *Converter, typ reflect.Type) (*jen.St
 	return jen.Qual("github.com/hashicorp/terraform-plugin-framework/types", "Int64"), nil
 }
 
-func (c *IntConverter) Decode(converters *Converter, path, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
+func (c *IntConverter) Decode(converters *Converter, field *FieldInformation, path, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
 	op := jen.Empty()
 	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
@@ -65,13 +64,10 @@ func (c *IntConverter) Decode(converters *Converter, path, src, target *jen.Stat
 		return nil, fmt.Errorf("unexpected type %s", typ.Name())
 	}
 
-	return jen.If().Op("!").Add(src.Clone()).Dot("IsNull").Call().Block(
-		jen.Id("i").Op(":=").Add(code),
-		target.Op("=").Add(op).Id("i"),
-	), nil
+	return decode(src, jen.Id("i").Op(":=").Add(code).Line().Add(target.Op("=").Add(op).Id("i")))
 }
 
-func (c *IntConverter) Encode(converters *Converter, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
+func (c *IntConverter) Encode(converters *Converter, field *FieldInformation, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
 	ptr := false
 	if typ.Kind() == reflect.Pointer {
 		ptr = true
@@ -100,7 +96,7 @@ func (c *IntConverter) Encode(converters *Converter, src, target *jen.Statement,
 	return code, nil
 }
 
-func (c *IntConverter) GetSchema(converters *Converter, path string, info *tags.FieldInformation) (*jen.Statement, *jen.Statement, error) {
+func (c *IntConverter) GetSchema(converters *Converter, path string, info *FieldInformation) (*jen.Statement, *jen.Statement, error) {
 	return basicSchema(converters.SchemaImportPath(), "Int64Attribute", info, nil)
 }
 

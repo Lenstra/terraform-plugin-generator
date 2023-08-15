@@ -1,23 +1,21 @@
 package generator
 
 import (
-	"github.com/Lenstra/terraform-plugin-generator/converters"
-	"github.com/Lenstra/terraform-plugin-generator/tags"
 	"github.com/dave/jennifer/jen"
 	"github.com/hashicorp/go-hclog"
 )
 
 type GeneratorOptions struct {
 	Logger              hclog.Logger
-	GetFieldInformation tags.FieldInformationGetter
-	AttributeConverters []converters.AttributeConverter
+	GetFieldInformation FieldInformationGetter
+	AttributeConverters []AttributeConverter
 }
 
 func (o *GeneratorOptions) validate() *GeneratorOptions {
 	res := &GeneratorOptions{
 		Logger:              hclog.Default(),
-		GetFieldInformation: tags.GetFieldInformationFromTerraformTag,
-		AttributeConverters: converters.DefaultConverters,
+		GetFieldInformation: GetFieldInformationFromTerraformTag,
+		AttributeConverters: DefaultConverters,
 	}
 	if o == nil {
 		return res

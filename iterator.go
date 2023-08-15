@@ -1,35 +1,33 @@
-package iterators
+package generator
 
 import (
 	"fmt"
 	"reflect"
-
-	"github.com/Lenstra/terraform-plugin-generator/tags"
-	"github.com/dave/jennifer/jen"
 )
 
-func IterateFields(path string, infoGetter tags.FieldInformationGetter, typ reflect.Type) ([]*tags.FieldInformation, []reflect.Type, error) {
+func iterateFields(path string, infoGetter FieldInformationGetter, typ reflect.Type) ([]*FieldInformation, []reflect.Type, error) {
 	// We accept to get a Struct or a pointer to a struct to simplify the code in
 	// the converters
 	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
-	if typ.Kind() != reflect.Struct {
-		return nil, nil, fmt.Errorf("expected Struct, got %s", typ.String())
-	}
 
 	type obj struct {
-		Type     reflect.Type
-		Accessor *jen.Statement
+		Type reflect.Type
+		Tag  *FieldInformation
 	}
-	queue := []obj{{Type: typ, Accessor: jen.Empty()}}
+	queue := []obj{{Type: typ, Tag: nil}}
 
-	fields := []*tags.FieldInformation{}
+	fields := []*FieldInformation{}
 	todo := []reflect.Type{}
 
 	for i := 0; i < len(queue); i++ {
 		o := queue[i]
 		typ := o.Type
+
+		if typ.Kind() != reflect.Struct {
+			return nil, nil, fmt.Errorf("expected Struct, got %s", typ.String())
+		}
 
 		for i := 0; i < typ.NumField(); i++ {
 			field := typ.Field(i)
@@ -41,10 +39,16 @@ func IterateFields(path string, infoGetter tags.FieldInformationGetter, typ refl
 				continue
 			}
 
-			tag.Accessor = o.Accessor.Clone().Add(tag.Accessor)
+			tag.Parent = o.Tag
 
 			if tag.Promoted {
-				queue = append(queue, obj{Type: field.Type, Accessor: tag.Accessor})
+				if tag.Parent != nil {
+					return nil, nil, fmt.Errorf("multiple attribute levels have been promoted")
+				}
+				if field.Type.Kind() == reflect.Pointer {
+					field.Type = field.Type.Elem()
+				}
+				queue = append(queue, obj{Type: field.Type, Tag: tag})
 				continue
 			}
 

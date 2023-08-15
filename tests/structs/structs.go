@@ -1,9 +1,22 @@
 package structs
 
 type Config struct {
-	Host     string `terraform:"host,required"`
-	Username string `terraform:"username"`
-	Password string `terraform:"password,sensitive"`
+	Host           string         `terraform:"host,required"`
+	PromotedBool   PromotedBool   `terraform:"-,promoted"`
+	PromotedInt    PromotedInt    `terraform:"-,promoted"`
+	PromotedString PromotedString `terraform:"-,promoted"`
+}
+
+type PromotedBool struct {
+	Bool bool `terraform:"bool"`
+}
+
+type PromotedInt struct {
+	Int int `terraform:"int"`
+}
+
+type PromotedString struct {
+	String string `terraform:"string"`
 }
 
 type Coffee struct {

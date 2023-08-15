@@ -1,9 +1,8 @@
-package converters
+package generator
 
 import (
 	"reflect"
 
-	"github.com/Lenstra/terraform-plugin-generator/tags"
 	"github.com/dave/jennifer/jen"
 )
 
@@ -23,17 +22,16 @@ func (c *BoolConverter) GetFrameworkType(_ *Converter, typ reflect.Type) (*jen.S
 	return jen.Qual("github.com/hashicorp/terraform-plugin-framework/types", "Bool"), nil
 }
 
-func (c *BoolConverter) Decode(converters *Converter, path, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
+func (c *BoolConverter) Decode(converters *Converter, field *FieldInformation, path, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
 	method := "ValueBool"
 	if typ.Kind() == reflect.Pointer {
 		method = "ValueBoolPointer"
 	}
-	return jen.If().Op("!").Add(src.Clone()).Dot("IsNull").Call().Block(
-		target.Op("=").Add(src.Clone()).Dot(method).Call(),
-	), nil
+
+	return decode(src, target.Op("=").Add(src.Clone()).Dot(method).Call())
 }
 
-func (c *BoolConverter) Encode(converters *Converter, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
+func (c *BoolConverter) Encode(converters *Converter, field *FieldInformation, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
 	method := "BoolValue"
 	if typ.Kind() == reflect.Pointer {
 		method = "BoolPointerValue"
@@ -41,7 +39,7 @@ func (c *BoolConverter) Encode(converters *Converter, src, target *jen.Statement
 	return target.Op("=").Qual("github.com/hashicorp/terraform-plugin-framework/types", method).Call(src), nil
 }
 
-func (c *BoolConverter) GetSchema(converters *Converter, path string, info *tags.FieldInformation) (*jen.Statement, *jen.Statement, error) {
+func (c *BoolConverter) GetSchema(converters *Converter, path string, info *FieldInformation) (*jen.Statement, *jen.Statement, error) {
 	return basicSchema(converters.SchemaImportPath(), "BoolAttribute", info, nil)
 }
 

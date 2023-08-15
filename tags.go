@@ -1,4 +1,4 @@
-package tags
+package generator
 
 import (
 	"fmt"
@@ -14,15 +14,18 @@ type FieldInformation struct {
 	Optional    bool
 	Required    bool
 	Computed    bool
-	Promoted    bool
 	Sensitive   bool
 	Description string
 	Block       bool
+	Default     *jen.Statement
+
+	Promoted bool
+	Parent   *FieldInformation
 
 	// Go data
-	GoName   string
-	GoType   reflect.Type
-	Accessor *jen.Statement
+	goName   string
+	goType   reflect.Type
+	accessor *jen.Statement
 }
 
 type FieldInformationGetter func(string, reflect.StructField) (*FieldInformation, error)
@@ -39,9 +42,9 @@ func GetFieldInformationFromTerraformTag(_ string, field reflect.StructField) (*
 
 	result := &FieldInformation{
 		Name:     name,
-		GoName:   field.Name,
-		GoType:   field.Type,
-		Accessor: jen.Dot(field.Name),
+		goName:   field.Name,
+		goType:   field.Type,
+		accessor: jen.Dot(field.Name),
 	}
 
 	for _, v := range values {

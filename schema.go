@@ -6,10 +6,6 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/Lenstra/terraform-plugin-generator/converters"
-	"github.com/Lenstra/terraform-plugin-generator/internal/iterators"
-	"github.com/Lenstra/terraform-plugin-generator/tags"
-	"github.com/hashicorp/go-hclog"
 	"github.com/stoewer/go-strcase"
 
 	. "github.com/dave/jennifer/jen" //lint:ignore ST1001 accept dot import
@@ -38,43 +34,28 @@ func (s SchemaType) importPath() string {
 	return ""
 }
 
-type SchemaGenerator struct {
-	Type                SchemaType
-	Path                string
-	Package             string
-	Objects             map[string]interface{}
-	Logger              hclog.Logger
-	GetFieldInformation tags.FieldInformationGetter
-	AttributeConverters []converters.AttributeConverter
-}
-
-func (g *SchemaGenerator) Render() error {
-	if g.AttributeConverters == nil {
-		g.AttributeConverters = converters.DefaultConverters
-	}
-	if g.GetFieldInformation == nil {
-		g.GetFieldInformation = tags.GetFieldInformationFromTerraformTag
-	}
-	importPath := g.Type.importPath()
+func GenerateSchema(typ SchemaType, path, pkg string, objects map[string]interface{}, opts *GeneratorOptions) error {
+	opts = opts.validate()
+	importPath := typ.importPath()
 	if importPath == "" {
-		return fmt.Errorf("unexpected schema type %q", g.Type)
+		return fmt.Errorf("unexpected schema type %q", typ)
 	}
 
 	names := []string{}
-	for k := range g.Objects {
+	for k := range objects {
 		names = append(names, k)
 	}
 
 	m := map[reflect.Type]string{}
-	converter := converters.NewConverter(g.AttributeConverters, &m, g.GetFieldInformation, importPath)
+	converter := NewConverter(opts.AttributeConverters, &m, opts.GetFieldInformation, importPath)
 
 	sort.Strings(names)
 
-	f := NewFile(g.Package)
+	f := NewFile(pkg)
 	f.HeaderComment(headerComment)
 
 	for _, name := range names {
-		code, err := g.renderObject(converter, importPath, name, reflect.TypeOf(g.Objects[name]))
+		code, err := renderObjectSchema(converter, importPath, name, reflect.TypeOf(objects[name]), opts)
 		if err != nil {
 			return err
 		}
@@ -82,11 +63,11 @@ func (g *SchemaGenerator) Render() error {
 
 	}
 
-	return f.Save(filepath.Join(g.Path, "schema.go"))
+	return f.Save(filepath.Join(path, "schema.go"))
 }
 
-func (g *SchemaGenerator) renderObject(c *converters.Converter, importPath, name string, typ reflect.Type) (*Statement, error) {
-	fields, _, err := iterators.IterateFields(name, g.GetFieldInformation, typ)
+func renderObjectSchema(c *Converter, importPath, name string, typ reflect.Type, opts *GeneratorOptions) (*Statement, error) {
+	fields, _, err := iterateFields(name, opts.GetFieldInformation, typ)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +75,7 @@ func (g *SchemaGenerator) renderObject(c *converters.Converter, importPath, name
 	attributes := []Code{}
 	blocks := []Code{}
 	for _, field := range fields {
-		converter, err := c.Get(field.GoType)
+		converter, err := c.Get(field.goType)
 		if err != nil {
 			return nil, err
 		}

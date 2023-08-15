@@ -1,18 +1,15 @@
-package converters
+package generator
 
 import (
 	"fmt"
 	"reflect"
 	"strings"
 
-	"github.com/Lenstra/terraform-plugin-generator/internal/helpers"
-	"github.com/Lenstra/terraform-plugin-generator/internal/iterators"
-	"github.com/Lenstra/terraform-plugin-generator/tags"
 	"github.com/dave/jennifer/jen"
 	"github.com/stoewer/go-strcase"
 )
 
-func basicSchema(importPath, name string, info *tags.FieldInformation, attributes []jen.Code) (*jen.Statement, *jen.Statement, error) {
+func basicSchema(importPath, name string, info *FieldInformation, attributes []jen.Code) (*jen.Statement, *jen.Statement, error) {
 	return jen.Qual(importPath, name).ValuesFunc(func(g *jen.Group) {
 		if info.Optional {
 			g.Line().Id("Optional").Op(":").True()
@@ -32,8 +29,15 @@ func basicSchema(importPath, name string, info *tags.FieldInformation, attribute
 		for _, code := range attributes {
 			g.Line().Add(code)
 		}
+		if info.Default != nil {
+			g.Line().Id("Default").Op(":").Add(info.Default)
+		}
 		g.Line()
 	}), nil, nil
+}
+
+func decode(src *jen.Statement, inner *jen.Statement) (*jen.Statement, error) {
+	return jen.If().Op("!").Add(src.Clone()).Dot("IsNull").Call().Block(inner.Clone()), nil
 }
 
 var DefaultConverters = []AttributeConverter{
@@ -49,9 +53,9 @@ var DefaultConverters = []AttributeConverter{
 type AttributeConverter interface {
 	Check(reflect.Type) (bool, error)
 	GetFrameworkType(*Converter, reflect.Type) (*jen.Statement, error)
-	Decode(*Converter, *jen.Statement, *jen.Statement, *jen.Statement, reflect.Type) (*jen.Statement, error)
-	Encode(*Converter, *jen.Statement, *jen.Statement, reflect.Type) (*jen.Statement, error)
-	GetSchema(*Converter, string, *tags.FieldInformation) (*jen.Statement, *jen.Statement, error)
+	Decode(*Converter, *FieldInformation, *jen.Statement, *jen.Statement, *jen.Statement, reflect.Type) (*jen.Statement, error)
+	Encode(*Converter, *FieldInformation, *jen.Statement, *jen.Statement, reflect.Type) (*jen.Statement, error)
+	GetSchema(*Converter, string, *FieldInformation) (*jen.Statement, *jen.Statement, error)
 }
 
 type SimpleAttributeConverter interface {
@@ -73,11 +77,11 @@ type Converter struct {
 	attributeConverters []AttributeConverter
 	names               *map[reflect.Type]string
 	userGivenType       map[reflect.Type]struct{}
-	getFieldInformation tags.FieldInformationGetter
+	getFieldInformation FieldInformationGetter
 	schemaImportPath    string
 }
 
-func NewConverter(attributeConverters []AttributeConverter, names *map[reflect.Type]string, getFieldInformation tags.FieldInformationGetter, schemaImportPath string) *Converter {
+func NewConverter(attributeConverters []AttributeConverter, names *map[reflect.Type]string, getFieldInformation FieldInformationGetter, schemaImportPath string) *Converter {
 	c := &Converter{
 		attributeConverters: attributeConverters,
 		names:               names,
@@ -121,21 +125,21 @@ func (c *Converter) GetFrameworkType(typ reflect.Type) (*jen.Statement, error) {
 	return validate("GetFrameworkType()", converter, typ, stmt, err)
 }
 
-func (c *Converter) Decode(path, src, dest *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
+func (c *Converter) Decode(field *FieldInformation, path, src, dest *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
 	converter, err := c.Get(typ)
 	if err != nil {
 		return nil, err
 	}
-	stmt, err := converter.Decode(c, path, src, dest, typ)
+	stmt, err := converter.Decode(c, field, path, src, dest, typ)
 	return validate("Decode()", converter, typ, stmt, err)
 }
 
-func (c *Converter) Encode(src, dest *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
+func (c *Converter) Encode(field *FieldInformation, src, dest *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
 	converter, err := c.Get(typ)
 	if err != nil {
 		return nil, err
 	}
-	stmt, err := converter.Encode(c, src, dest, typ)
+	stmt, err := converter.Encode(c, field, src, dest, typ)
 	return validate("Encode()", converter, typ, stmt, err)
 }
 
@@ -150,7 +154,7 @@ func (c *Converter) GetNamesForType(typ reflect.Type) (string, string, string, s
 			// If there is a conflict we try to prefix the name with the package
 
 			name = typ.PkgPath() + name
-			name = helpers.Public(name[strings.LastIndex(name, "/")+1:])
+			name = strings.ToUpper(name[:1]) + name[1:]
 
 			for t, v := range *c.names {
 				// If there is still a conflict we bail out now
@@ -164,14 +168,14 @@ func (c *Converter) GetNamesForType(typ reflect.Type) (string, string, string, s
 
 	encodingFuncName := "encode" + name
 	if _, found := c.userGivenType[typ]; found {
-		encodingFuncName = helpers.Public(encodingFuncName)
+		encodingFuncName = strings.ToUpper(encodingFuncName[:1]) + encodingFuncName[1:]
 	}
 
 	return name, strcase.LowerCamelCase(name), "decode" + name, encodingFuncName, nil
 }
 
-func (c *Converter) GetFields(path string, typ reflect.Type) ([]*tags.FieldInformation, error) {
-	fields, _, err := iterators.IterateFields(path, c.getFieldInformation, typ)
+func (c *Converter) GetFields(path string, typ reflect.Type) ([]*FieldInformation, error) {
+	fields, _, err := iterateFields(path, c.getFieldInformation, typ)
 	if err != nil {
 		return nil, err
 	}

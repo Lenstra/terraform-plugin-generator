@@ -1,9 +1,8 @@
-package converters
+package generator
 
 import (
 	"reflect"
 
-	"github.com/Lenstra/terraform-plugin-generator/tags"
 	"github.com/dave/jennifer/jen"
 )
 
@@ -23,8 +22,8 @@ func (c *MapConverter) GetFrameworkType(converters *Converter, typ reflect.Type)
 	return jen.Map(jen.String()).Add(subType), nil
 }
 
-func (c *MapConverter) Decode(converters *Converter, path, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
-	code, err := converters.Decode(path.Dot("AtMapKey").Call(jen.Id("key")), jen.Id("data"), target.Clone().Index(jen.Id("key")), typ.Elem())
+func (c *MapConverter) Decode(converters *Converter, field *FieldInformation, path, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
+	code, err := converters.Decode(field, path.Dot("AtMapKey").Call(jen.Id("key")), jen.Id("data"), target.Clone().Index(jen.Id("key")), typ.Elem())
 	if err != nil {
 		return nil, err
 	}
@@ -49,14 +48,14 @@ func (c *MapConverter) Decode(converters *Converter, path, src, target *jen.Stat
 	), nil
 }
 
-func (c *MapConverter) Encode(converters *Converter, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
+func (c *MapConverter) Encode(converters *Converter, field *FieldInformation, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
 	frameworkType, err := converters.GetFrameworkType(typ)
 	if err != nil {
 		return nil, err
 	}
 	typ = typ.Elem()
 
-	code, err := converters.Encode(jen.Id("v"), target.Clone().Index(jen.Id("k")), typ)
+	code, err := converters.Encode(field, jen.Id("v"), target.Clone().Index(jen.Id("k")), typ)
 	if err != nil {
 		return nil, err
 	}
@@ -69,8 +68,8 @@ func (c *MapConverter) Encode(converters *Converter, src, target *jen.Statement,
 	), nil
 }
 
-func (c *MapConverter) GetSchema(converters *Converter, path string, info *tags.FieldInformation) (*jen.Statement, *jen.Statement, error) {
-	typ := info.GoType.Elem()
+func (c *MapConverter) GetSchema(converters *Converter, path string, info *FieldInformation) (*jen.Statement, *jen.Statement, error) {
+	typ := info.goType.Elem()
 	slice := false
 	if typ.Kind() == reflect.Slice {
 		slice = true
@@ -107,6 +106,9 @@ func (c *MapConverter) GetSchema(converters *Converter, path string, info *tags.
 			if info.Description != "" {
 				g.Line().Id("MarkdownDescription").Op(":").Lit(info.Description)
 			}
+			if info.Default != nil {
+				g.Line().Id("Default").Op(":").Add(info.Default)
+			}
 			g.Line()
 		}), nil, nil
 	}
@@ -117,7 +119,7 @@ func (c *MapConverter) GetSchema(converters *Converter, path string, info *tags.
 	}
 	codes := []jen.Code{}
 	for _, field := range fields {
-		converter, err := converters.Get(field.GoType)
+		converter, err := converters.Get(field.goType)
 		if err != nil {
 			return nil, nil, err
 		}

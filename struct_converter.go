@@ -1,10 +1,9 @@
-package converters
+package generator
 
 import (
 	"fmt"
 	"reflect"
 
-	"github.com/Lenstra/terraform-plugin-generator/tags"
 	"github.com/dave/jennifer/jen"
 )
 
@@ -31,7 +30,7 @@ func (c *StructConverter) GetFrameworkType(converters *Converter, typ reflect.Ty
 	return jen.Op("*").Id(name), nil
 }
 
-func (c *StructConverter) Decode(converters *Converter, path, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
+func (c *StructConverter) Decode(converters *Converter, field *FieldInformation, path, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
 	ref := jen.Op("*").Id("item")
 	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
@@ -54,7 +53,7 @@ func (c *StructConverter) Decode(converters *Converter, path, src, target *jen.S
 	), nil
 }
 
-func (c *StructConverter) Encode(converters *Converter, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
+func (c *StructConverter) Encode(converters *Converter, field *FieldInformation, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
 	ptr := false
 	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
@@ -84,8 +83,8 @@ func (c *StructConverter) Encode(converters *Converter, src, target *jen.Stateme
 
 }
 
-func (c *StructConverter) GetSchema(converters *Converter, path string, info *tags.FieldInformation) (*jen.Statement, *jen.Statement, error) {
-	typ := info.GoType
+func (c *StructConverter) GetSchema(converters *Converter, path string, info *FieldInformation) (*jen.Statement, *jen.Statement, error) {
+	typ := info.goType
 	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
@@ -98,7 +97,7 @@ func (c *StructConverter) GetSchema(converters *Converter, path string, info *ta
 	attrs := []jen.Code{}
 	blocks := []jen.Code{}
 	for _, field := range fields {
-		converter, err := converters.Get(field.GoType)
+		converter, err := converters.Get(field.goType)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -142,6 +141,9 @@ func (c *StructConverter) GetSchema(converters *Converter, path string, info *ta
 		}
 		if info.Description != "" {
 			g.Line().Id("MarkdownDescription").Op(":").Lit(info.Description)
+		}
+		if info.Default != nil {
+			g.Line().Id("Default").Op(":").Add(info.Default)
 		}
 		for _, code := range codes {
 			g.Line().Add(code)

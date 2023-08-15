@@ -128,12 +128,17 @@ func decodeConfig(path path.Path, data *Config, config **structs.Config) (diags 
 		target.Host = data.Host.ValueString()
 	}
 
-	if !data.Username.IsNull() {
-		target.Username = data.Username.ValueString()
+	if !data.Bool.IsNull() {
+		target.PromotedBool.Bool = data.Bool.ValueBool()
 	}
 
-	if !data.Password.IsNull() {
-		target.Password = data.Password.ValueString()
+	if !data.Int.IsNull() {
+		i := int(data.Int.ValueInt64())
+		target.PromotedInt.Int = i
+	}
+
+	if !data.String.IsNull() {
+		target.PromotedString.String = data.String.ValueString()
 	}
 
 	return diags

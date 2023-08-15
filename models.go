@@ -5,10 +5,9 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strings"
+	"time"
 
-	"github.com/Lenstra/terraform-plugin-generator/converters"
-	"github.com/Lenstra/terraform-plugin-generator/internal/helpers"
-	"github.com/Lenstra/terraform-plugin-generator/internal/iterators"
 	. "github.com/dave/jennifer/jen" //lint:ignore ST1001 accept dot import
 	"golang.org/x/exp/slices"
 )
@@ -34,7 +33,7 @@ func GenerateModels(path, pkg string, objects map[string]interface{}, opts *Gene
 
 	sort.Strings(userGiven)
 
-	converter := converters.NewConverter(opts.AttributeConverters, &names, opts.GetFieldInformation, "")
+	converter := NewConverter(opts.AttributeConverters, &names, opts.GetFieldInformation, "")
 
 	queue := []reflect.Type{}
 	for _, name := range userGiven {
@@ -93,7 +92,7 @@ func GenerateModels(path, pkg string, objects map[string]interface{}, opts *Gene
 		if typ.Kind() != reflect.Struct {
 			return fmt.Errorf("this should not happen")
 		}
-		if helpers.Ignore(typ) {
+		if typ == reflect.TypeOf(time.Time{}) {
 			continue
 		}
 		// If we have a name for this type it means it has already been
@@ -151,22 +150,22 @@ func GenerateModels(path, pkg string, objects map[string]interface{}, opts *Gene
 	return encodersFile.Save(filepath.Join(path, "encoders.go"))
 }
 
-func renderObject(c *converters.Converter, opts *GeneratorOptions, typ reflect.Type) (*Statement, []reflect.Type, error) {
-	fields, todo, err := iterators.IterateFields("", opts.GetFieldInformation, typ)
+func renderObject(c *Converter, opts *GeneratorOptions, typ reflect.Type) (*Statement, []reflect.Type, error) {
+	fields, todo, err := iterateFields("", opts.GetFieldInformation, typ)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	var codes []Code
 	for _, field := range fields {
-		code, err := c.GetFrameworkType(field.GoType)
+		code, err := c.GetFrameworkType(field.goType)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		codes = append(
 			codes,
-			Id(field.GoName).Add(code).Tag(map[string]string{"tfsdk": field.Name}),
+			Id(field.goName).Add(code).Tag(map[string]string{"tfsdk": field.Name}),
 		)
 	}
 
@@ -177,8 +176,8 @@ func renderObject(c *converters.Converter, opts *GeneratorOptions, typ reflect.T
 	return Type().Id(name).Struct(codes...).Line(), todo, nil
 }
 
-func renderDecodeFunction(c *converters.Converter, opts *GeneratorOptions, typ reflect.Type) (*Statement, error) {
-	fields, _, err := iterators.IterateFields("", opts.GetFieldInformation, typ)
+func renderDecodeFunction(c *Converter, opts *GeneratorOptions, typ reflect.Type) (*Statement, error) {
+	fields, _, err := iterateFields("", opts.GetFieldInformation, typ)
 	if err != nil {
 		return nil, err
 	}
@@ -190,11 +189,16 @@ func renderDecodeFunction(c *converters.Converter, opts *GeneratorOptions, typ r
 
 	codes := []Code{}
 	for _, field := range fields {
+		target := Id("target")
+		if field.Parent != nil {
+			target.Add(field.Parent.accessor.Clone())
+		}
 		code, err := c.Decode(
+			field,
 			Id("path").Dot("AtName").Call(Lit(field.Name)),
-			Id("data").Dot(field.GoName),
-			Id("target").Add(field.Accessor),
-			field.GoType,
+			Id("data").Dot(field.goName),
+			target.Add(field.accessor),
+			field.goType,
 		)
 		if err != nil {
 			return nil, err
@@ -226,13 +230,14 @@ func renderDecodeFunction(c *converters.Converter, opts *GeneratorOptions, typ r
 	}).Line().Line(), nil
 }
 
-func renderPublicDecodeFunction(c *converters.Converter, typ reflect.Type) (*Statement, error) {
+func renderPublicDecodeFunction(c *Converter, typ reflect.Type) (*Statement, error) {
 	_, name, decodeFunctionName, _, err := c.GetNamesForType(typ)
 	if err != nil {
 		return nil, err
 	}
+	publicName := strings.ToUpper(decodeFunctionName[:1]) + decodeFunctionName[1:]
 
-	return Func().Id(helpers.Public(decodeFunctionName)).Params(
+	return Func().Id(publicName).Params(
 		Id("ctx").Qual("context", "Context"),
 		Id("getter").Id("Getter"),
 		Id(name).Op("**").Qual(typ.PkgPath(), typ.Name()),
@@ -252,8 +257,8 @@ func renderPublicDecodeFunction(c *converters.Converter, typ reflect.Type) (*Sta
 	).Line(), nil
 }
 
-func renderEncodeFunction(c *converters.Converter, opts *GeneratorOptions, typ reflect.Type) (*Statement, error) {
-	fields, _, err := iterators.IterateFields("", opts.GetFieldInformation, typ)
+func renderEncodeFunction(c *Converter, opts *GeneratorOptions, typ reflect.Type) (*Statement, error) {
+	fields, _, err := iterateFields("", opts.GetFieldInformation, typ)
 	if err != nil {
 		return nil, err
 	}
@@ -265,10 +270,15 @@ func renderEncodeFunction(c *converters.Converter, opts *GeneratorOptions, typ r
 
 	codes := []Code{}
 	for _, field := range fields {
+		target := Id(ident)
+		if field.Parent != nil {
+			target = target.Add(field.Parent.accessor.Clone())
+		}
 		code, err := c.Encode(
-			Id(ident).Add(field.Accessor),
-			Id("res").Dot(field.GoName),
-			field.GoType,
+			field,
+			target.Add(field.accessor),
+			Id("res").Dot(field.goName),
+			field.goType,
 		)
 		if err != nil {
 			return nil, err

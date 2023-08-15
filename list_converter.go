@@ -1,10 +1,9 @@
-package converters
+package generator
 
 import (
 	"fmt"
 	"reflect"
 
-	"github.com/Lenstra/terraform-plugin-generator/tags"
 	"github.com/dave/jennifer/jen"
 )
 
@@ -24,8 +23,8 @@ func (c *ListConverter) GetFrameworkType(converters *Converter, typ reflect.Type
 	return jen.Index().Add(subType), nil
 }
 
-func (c *ListConverter) Decode(converters *Converter, path, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
-	code, err := converters.Decode(path.Dot("AtListIndex").Call(jen.Id("i")), jen.Id("data"), target.Clone().Index(jen.Id("i")), typ.Elem())
+func (c *ListConverter) Decode(converters *Converter, field *FieldInformation, path, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
+	code, err := converters.Decode(field, path.Dot("AtListIndex").Call(jen.Id("i")), jen.Id("data"), target.Clone().Index(jen.Id("i")), typ.Elem())
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +46,7 @@ func (c *ListConverter) Decode(converters *Converter, path, src, target *jen.Sta
 	), nil
 }
 
-func (c *ListConverter) Encode(converters *Converter, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
+func (c *ListConverter) Encode(converters *Converter, field *FieldInformation, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
 	frameworkType, err := converters.GetFrameworkType(typ)
 	if err != nil {
 		return nil, err
@@ -55,7 +54,7 @@ func (c *ListConverter) Encode(converters *Converter, src, target *jen.Statement
 
 	typ = typ.Elem()
 
-	code, err := converters.Encode(jen.Id("attr"), target.Clone().Index(jen.Id("i")), typ)
+	code, err := converters.Encode(field, jen.Id("attr"), target.Clone().Index(jen.Id("i")), typ)
 	if err != nil {
 		return nil, err
 	}
@@ -68,8 +67,8 @@ func (c *ListConverter) Encode(converters *Converter, src, target *jen.Statement
 	), nil
 }
 
-func (c *ListConverter) GetSchema(converters *Converter, path string, info *tags.FieldInformation) (*jen.Statement, *jen.Statement, error) {
-	typ := info.GoType.Elem()
+func (c *ListConverter) GetSchema(converters *Converter, path string, info *FieldInformation) (*jen.Statement, *jen.Statement, error) {
+	typ := info.goType.Elem()
 	converter, err := converters.Get(typ)
 	if err != nil {
 		return nil, nil, err
@@ -92,6 +91,9 @@ func (c *ListConverter) GetSchema(converters *Converter, path string, info *tags
 			if info.Description != "" {
 				g.Line().Id("MarkdownDescription").Op(":").Lit(info.Description)
 			}
+			if info.Default != nil {
+				g.Line().Id("Default").Op(":").Add(info.Default)
+			}
 			g.Line()
 		}), nil, nil
 	}
@@ -104,7 +106,7 @@ func (c *ListConverter) GetSchema(converters *Converter, path string, info *tags
 	attrs := []jen.Code{}
 	blocks := []jen.Code{}
 	for _, field := range fields {
-		converter, err := converters.Get(field.GoType)
+		converter, err := converters.Get(field.goType)
 		if err != nil {
 			return nil, nil, err
 		}

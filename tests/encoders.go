@@ -83,8 +83,9 @@ func EncodeConfig(config *structs.Config) (*Config, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	res := Config{}
 	res.Host = types.StringValue(config.Host)
-	res.Username = types.StringValue(config.Username)
-	res.Password = types.StringValue(config.Password)
+	res.Bool = types.BoolValue(config.PromotedBool.Bool)
+	res.Int = types.Int64Value(int64(config.PromotedInt.Int))
+	res.String = types.StringValue(config.PromotedString.String)
 	return &res, diags
 }
 

@@ -1,9 +1,8 @@
-package converters
+package generator
 
 import (
 	"reflect"
 
-	"github.com/Lenstra/terraform-plugin-generator/tags"
 	"github.com/dave/jennifer/jen"
 )
 
@@ -24,7 +23,7 @@ func (c *MapInterfaceConverter) GetFrameworkType(_ *Converter, typ reflect.Type)
 	return jen.Qual("github.com/hashicorp/terraform-plugin-framework/types", "String"), nil
 }
 
-func (c *MapInterfaceConverter) Decode(converters *Converter, path, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
+func (c *MapInterfaceConverter) Decode(converters *Converter, field *FieldInformation, path, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
 	return jen.If().Op("!").Add(src.Clone()).Dot("IsNull").Call().Block(
 		jen.Var().Id("m").Map(jen.String()).Interface(),
 		jen.If(jen.Id("err").Op(":=").Qual("encoding/json", "Unmarshal").Call(jen.Index().Byte().Call(src.Clone().Dot("ValueString").Call()), jen.Op("&").Id("m")), jen.Id("err").Op("!=").Nil()).Block(
@@ -35,7 +34,7 @@ func (c *MapInterfaceConverter) Decode(converters *Converter, path, src, target 
 	), nil
 }
 
-func (c *MapInterfaceConverter) Encode(converters *Converter, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
+func (c *MapInterfaceConverter) Encode(converters *Converter, field *FieldInformation, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
 	return jen.If(src.Clone().Op("!=").Nil()).Block(
 		jen.List(jen.Id("data"), jen.Id("err")).Op(":=").Qual("encoding/json", "Marshal").Call(src.Clone()),
 		jen.If(jen.Id("err").Op("!=").Nil()).Block(
@@ -45,7 +44,7 @@ func (c *MapInterfaceConverter) Encode(converters *Converter, src, target *jen.S
 	), nil
 }
 
-func (c *MapInterfaceConverter) GetSchema(converters *Converter, path string, info *tags.FieldInformation) (*jen.Statement, *jen.Statement, error) {
+func (c *MapInterfaceConverter) GetSchema(converters *Converter, path string, info *FieldInformation) (*jen.Statement, *jen.Statement, error) {
 	return basicSchema(converters.SchemaImportPath(), "StringAttribute", info, nil)
 }
 

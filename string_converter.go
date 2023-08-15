@@ -1,11 +1,10 @@
-package converters
+package generator
 
 import (
 	"fmt"
 	"reflect"
 	"time"
 
-	"github.com/Lenstra/terraform-plugin-generator/tags"
 	"github.com/dave/jennifer/jen"
 )
 
@@ -50,7 +49,7 @@ func (c *StringConverter) GetFrameworkType(_ *Converter, typ reflect.Type) (*jen
 	return jen.Qual("github.com/hashicorp/terraform-plugin-framework/types", "String"), nil
 }
 
-func (c *StringConverter) Decode(converters *Converter, path, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
+func (c *StringConverter) Decode(converters *Converter, field *FieldInformation, path, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
 	switch getStringType(typ) {
 	case byteType:
 		return decodeBytes(converters, path, src, target, typ)
@@ -117,7 +116,7 @@ func decodeTime(converters *Converter, path, src, target *jen.Statement, typ ref
 	), nil
 }
 
-func (c *StringConverter) Encode(converters *Converter, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
+func (c *StringConverter) Encode(converters *Converter, field *FieldInformation, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
 	switch getStringType(typ) {
 	case byteType:
 		return encodeBytes(converters, src, target, typ)
@@ -184,7 +183,7 @@ func encodeTime(converters *Converter, src, target *jen.Statement, typ reflect.T
 	return code, nil
 }
 
-func (c *StringConverter) GetSchema(converters *Converter, path string, info *tags.FieldInformation) (*jen.Statement, *jen.Statement, error) {
+func (c *StringConverter) GetSchema(converters *Converter, path string, info *FieldInformation) (*jen.Statement, *jen.Statement, error) {
 	return basicSchema(converters.SchemaImportPath(), "StringAttribute", info, nil)
 }
 

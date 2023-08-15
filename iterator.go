@@ -31,7 +31,7 @@ func iterateFields(path string, infoGetter FieldInformationGetter, typ reflect.T
 
 		for i := 0; i < typ.NumField(); i++ {
 			field := typ.Field(i)
-			tag, err := infoGetter(path, field)
+			tag, err := infoGetter(path, typ, field)
 			if err != nil {
 				return nil, nil, err
 			}

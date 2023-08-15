@@ -16,8 +16,8 @@ func TestModels(t *testing.T) {
 		"Ingredient": structs.Ingredient{},
 	}
 	err := GenerateModels("./tests/", "tests", objects, &GeneratorOptions{
-		GetFieldInformation: func(s string, sf reflect.StructField) (*FieldInformation, error) {
-			info, err := GetFieldInformationFromTerraformTag(s, sf)
+		GetFieldInformation: func(s string, typ reflect.Type, sf reflect.StructField) (*FieldInformation, error) {
+			info, err := GetFieldInformationFromTerraformTag(s, typ, sf)
 			if info == nil || err != nil {
 				return info, err
 			}
@@ -35,12 +35,13 @@ func TestSchema(t *testing.T) {
 		"Ingredient": structs.Ingredient{},
 	}
 	err := GenerateSchema(ResourceSchema, "./tests/", "tests", objects, &GeneratorOptions{
-		GetFieldInformation: func(s string, sf reflect.StructField) (*FieldInformation, error) {
-			info, err := GetFieldInformationFromTerraformTag(s, sf)
+		GetFieldInformation: func(s string, typ reflect.Type, sf reflect.StructField) (*FieldInformation, error) {
+			info, err := GetFieldInformationFromTerraformTag(s, typ, sf)
 			if info == nil || err != nil {
 				return info, err
 			}
 			info.Default = jen.Nil()
+			info.Validators = jen.Nil()
 			return info, nil
 		},
 	})

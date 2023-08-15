@@ -18,6 +18,7 @@ type FieldInformation struct {
 	Description string
 	Block       bool
 	Default     *jen.Statement
+	Validators  *jen.Statement
 
 	Promoted bool
 	Parent   *FieldInformation
@@ -28,9 +29,9 @@ type FieldInformation struct {
 	accessor *jen.Statement
 }
 
-type FieldInformationGetter func(string, reflect.StructField) (*FieldInformation, error)
+type FieldInformationGetter func(string, reflect.Type, reflect.StructField) (*FieldInformation, error)
 
-func GetFieldInformationFromTerraformTag(_ string, field reflect.StructField) (*FieldInformation, error) {
+func GetFieldInformationFromTerraformTag(_ string, typ reflect.Type, field reflect.StructField) (*FieldInformation, error) {
 	tag, ok := field.Tag.Lookup("terraform")
 	if !ok {
 		return nil, nil

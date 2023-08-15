@@ -94,6 +94,9 @@ func (c *ListConverter) GetSchema(converters *Converter, path string, info *Fiel
 			if info.Default != nil {
 				g.Line().Id("Default").Op(":").Add(info.Default)
 			}
+			if info.Validators != nil {
+				g.Line().Id("Validators").Op(":").Add(info.Validators)
+			}
 			g.Line()
 		}), nil, nil
 	}

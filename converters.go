@@ -32,6 +32,9 @@ func basicSchema(importPath, name string, info *FieldInformation, attributes []j
 		if info.Default != nil {
 			g.Line().Id("Default").Op(":").Add(info.Default)
 		}
+		if info.Validators != nil {
+			g.Line().Id("Validators").Op(":").Add(info.Validators)
+		}
 		g.Line()
 	}), nil, nil
 }

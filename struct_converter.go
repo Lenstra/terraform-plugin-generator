@@ -145,6 +145,9 @@ func (c *StructConverter) GetSchema(converters *Converter, path string, info *Fi
 		if info.Default != nil {
 			g.Line().Id("Default").Op(":").Add(info.Default)
 		}
+		if info.Validators != nil {
+			g.Line().Id("Validators").Op(":").Add(info.Validators)
+		}
 		for _, code := range codes {
 			g.Line().Add(code)
 		}

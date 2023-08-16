@@ -40,10 +40,42 @@ func GenerateModels(path, pkg string, objects map[string]interface{}, opts *Gene
 		queue = append(queue, reflect.TypeOf(objects[name]))
 	}
 
+	cases := []Code{}
+	for _, name := range userGiven {
+		typ := types[name]
+		_, _, decodeFunctionName, _, err := converter.GetNamesForType(typ)
+		if err != nil {
+			return err
+		}
+		publicName := strings.ToUpper(decodeFunctionName[:1]) + decodeFunctionName[1:]
+
+		cases = append(cases, Case(Op("**").Qual(typ.PkgPath(), typ.Name())).Block(
+			Return().Id(publicName).Call(Id("ctx"), Id("getter"), Id("o"))),
+		)
+	}
+
 	modelFile := newFile(pkg)
 	decodersFile := newFile(pkg)
 	decodersFile.Type().Id("Getter").Interface(
 		Id("Get").Params(Qual("context", "Context"), Interface()).Qual("github.com/hashicorp/terraform-plugin-framework/diag", "Diagnostics"),
+	).Line()
+
+	decodersFile.Func().Id("Decode").Index(Id("Target").UnionFunc(func(g *Group) {
+		for _, name := range userGiven {
+			typ := types[name]
+			g.Op("**").Qual(typ.PkgPath(), typ.Name())
+		}
+	})).Params(Id("ctx").Qual("context", "Context"), Id("getter").Id("Getter"), Id("obj").Id("Target")).Qual("github.com/hashicorp/terraform-plugin-framework/diag", "Diagnostics").Block(
+		Switch(Id("o").Op(":=").Any().Call(Id("obj")).Assert(Id("type"))).BlockFunc(func(gr *Group) {
+			for _, c := range cases {
+				gr.Add(c)
+			}
+			gr.Default().Block(
+				Var().Id("diags").Qual("github.com/hashicorp/terraform-plugin-framework/diag", "Diagnostics"),
+				Id("diags").Dot("AddError").Call(Lit("unsupported object type"), Qual("fmt", "Sprintf").Call(Lit("%T is not supported in %s.Set(). Please report this issue to the provider developers."), Id("obj"), Lit(pkg))),
+				Return().Id("diags"),
+			)
+		}),
 	).Line()
 
 	encodersFile := newFile(pkg)
@@ -51,7 +83,7 @@ func GenerateModels(path, pkg string, objects map[string]interface{}, opts *Gene
 		Id("Set").Params(Qual("context", "Context"), Interface()).Qual("github.com/hashicorp/terraform-plugin-framework/diag", "Diagnostics"),
 	).Line()
 
-	cases := []Code{}
+	cases = []Code{}
 	for _, name := range userGiven {
 		typ := types[name]
 		_, _, _, encodeFunctionName, err := converter.GetNamesForType(typ)

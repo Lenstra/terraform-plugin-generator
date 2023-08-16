@@ -7,6 +7,7 @@ package tests
 
 import (
 	"context"
+	"fmt"
 	structs "github.com/Lenstra/terraform-plugin-generator/tests/structs"
 	diag "github.com/hashicorp/terraform-plugin-framework/diag"
 	path "github.com/hashicorp/terraform-plugin-framework/path"
@@ -14,6 +15,21 @@ import (
 
 type Getter interface {
 	Get(context.Context, interface{}) diag.Diagnostics
+}
+
+func Decode[Target **structs.Coffee | **structs.Config | **structs.Ingredient](ctx context.Context, getter Getter, obj Target) diag.Diagnostics {
+	switch o := any(obj).(type) {
+	case **structs.Coffee:
+		return DecodeCoffee(ctx, getter, o)
+	case **structs.Config:
+		return DecodeConfig(ctx, getter, o)
+	case **structs.Ingredient:
+		return DecodeIngredient(ctx, getter, o)
+	default:
+		var diags diag.Diagnostics
+		diags.AddError("unsupported object type", fmt.Sprintf("%T is not supported in %s.Set(). Please report this issue to the provider developers.", obj, "tests"))
+		return diags
+	}
 }
 
 func DecodeCoffee(ctx context.Context, getter Getter, coffee **structs.Coffee) diag.Diagnostics {

@@ -48,6 +48,7 @@ var DefaultConverters = []AttributeConverter{
 	&BoolConverter{},
 	&StringConverter{},
 	&IntConverter{},
+	&FloatConverter{},
 	&ListConverter{},
 	&MapConverter{},
 	&StructConverter{},

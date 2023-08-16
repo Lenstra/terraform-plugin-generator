@@ -45,6 +45,16 @@ func coffeeSchema() schema.Schema {
 							Default:    nil,
 							Validators: nil,
 						},
+						"float32": schema.Float64Attribute{
+							Optional:   true,
+							Default:    nil,
+							Validators: nil,
+						},
+						"float64": schema.Float64Attribute{
+							Optional:   true,
+							Default:    nil,
+							Validators: nil,
+						},
 					}},
 			},
 			"customer": &schema.SingleNestedAttribute{
@@ -104,6 +114,16 @@ func ingredientSchema() schema.Schema {
 		Attributes: map[string]schema.Attribute{
 			"id": schema.Int64Attribute{
 				Required:   true,
+				Default:    nil,
+				Validators: nil,
+			},
+			"float32": schema.Float64Attribute{
+				Optional:   true,
+				Default:    nil,
+				Validators: nil,
+			},
+			"float64": schema.Float64Attribute{
+				Optional:   true,
 				Default:    nil,
 				Validators: nil,
 			},

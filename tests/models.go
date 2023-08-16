@@ -25,7 +25,9 @@ type Config struct {
 }
 
 type Ingredient struct {
-	ID types.Int64 `tfsdk:"id"`
+	ID      types.Int64   `tfsdk:"id"`
+	Float32 types.Float64 `tfsdk:"float32"`
+	Float64 types.Float64 `tfsdk:"float64"`
 }
 
 type Customer struct {

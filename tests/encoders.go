@@ -97,6 +97,8 @@ func EncodeIngredient(ingredient *structs.Ingredient) (*Ingredient, diag.Diagnos
 	var diags diag.Diagnostics
 	res := Ingredient{}
 	res.ID = types.Int64Value(int64(ingredient.ID))
+	res.Float32 = types.Float64Value(float64(ingredient.Float32))
+	res.Float64 = types.Float64Value(float64(ingredient.Float64))
 	return &res, diags
 }
 

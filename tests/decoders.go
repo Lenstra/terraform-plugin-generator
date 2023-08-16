@@ -161,6 +161,16 @@ func decodeIngredient(path path.Path, data *Ingredient, ingredient **structs.Ing
 		target.ID = i
 	}
 
+	if !data.Float32.IsNull() {
+		i := float32(data.Float32.ValueFloat64())
+		target.Float32 = i
+	}
+
+	if !data.Float64.IsNull() {
+		i := data.Float64.ValueFloat64()
+		target.Float64 = i
+	}
+
 	return diags
 }
 

@@ -30,7 +30,9 @@ type Coffee struct {
 }
 
 type Ingredient struct {
-	ID int `terraform:"id,required"`
+	ID      int     `terraform:"id,required"`
+	Float32 float32 `terraform:"float32"`
+	Float64 float64 `terraform:"float64"`
 }
 
 type Customer struct {

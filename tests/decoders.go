@@ -62,8 +62,8 @@ func decodeCoffee(path path.Path, data *Coffee, coffee **structs.Coffee) (diags 
 	}
 
 	if !data.ID.IsNull() {
-		i := int(data.ID.ValueInt64())
-		target.ID = i
+		n := int(data.ID.ValueInt64())
+		target.ID = n
 	}
 
 	if !data.Name.IsNull() {
@@ -133,8 +133,8 @@ func decodeConfig(path path.Path, data *Config, config **structs.Config) (diags 
 	}
 
 	if !data.Int.IsNull() {
-		i := int(data.Int.ValueInt64())
-		target.PromotedInt.Int = i
+		n := int(data.Int.ValueInt64())
+		target.PromotedInt.Int = n
 	}
 
 	if !data.String.IsNull() {
@@ -157,18 +157,18 @@ func decodeIngredient(path path.Path, data *Ingredient, ingredient **structs.Ing
 	}
 
 	if !data.ID.IsNull() {
-		i := int(data.ID.ValueInt64())
-		target.ID = i
+		n := int(data.ID.ValueInt64())
+		target.ID = n
 	}
 
 	if !data.Float32.IsNull() {
-		i := float32(data.Float32.ValueFloat64())
-		target.Float32 = i
+		n := float32(data.Float32.ValueFloat64())
+		target.Float32 = n
 	}
 
 	if !data.Float64.IsNull() {
-		i := data.Float64.ValueFloat64()
-		target.Float64 = i
+		n := data.Float64.ValueFloat64()
+		target.Float64 = n
 	}
 
 	return diags
@@ -187,8 +187,8 @@ func decodeCustomer(path path.Path, data *Customer, customer **structs.Customer)
 	}
 
 	if !data.ID.IsNull() {
-		i := data.ID.ValueInt64()
-		target.ID = i
+		n := data.ID.ValueInt64()
+		target.ID = n
 	}
 
 	if !data.Name.IsNull() {

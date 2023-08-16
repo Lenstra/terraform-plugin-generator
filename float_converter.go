@@ -44,7 +44,7 @@ func (c *FloatConverter) Decode(converters *Converter, field *FieldInformation, 
 		return nil, fmt.Errorf("unexpected type %s", typ.Name())
 	}
 
-	return decode(src, jen.Id("i").Op(":=").Add(code).Line().Add(target.Op("=").Add(op).Id("i")))
+	return decode(src, jen.Id("n").Op(":=").Add(code).Line().Add(target.Op("=").Add(op).Id("n")))
 }
 
 func (c *FloatConverter) Encode(converters *Converter, field *FieldInformation, src, target *jen.Statement, typ reflect.Type) (*jen.Statement, error) {
